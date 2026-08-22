@@ -456,11 +456,13 @@ function createDrawerScript(initialCollapsed: boolean): string {
       window.__prettyzapArchivedCycleResetInstalled = true;
     }
 
-    const setCollapsed = (collapsed) => {
+    const setCollapsed = (collapsed, notify = true) => {
       root.setAttribute("data-prettyzap-drawer-collapsed", String(collapsed));
-      document.dispatchEvent(new CustomEvent(${JSON.stringify(DRAWER_STATE_EVENT)}, {
-        detail: { collapsed },
-      }));
+      if (notify) {
+        document.dispatchEvent(new CustomEvent(${JSON.stringify(DRAWER_STATE_EVENT)}, {
+          detail: { collapsed },
+        }));
+      }
       const button = document.getElementById(toggleId);
       if (!button) return;
 
@@ -474,12 +476,186 @@ function createDrawerScript(initialCollapsed: boolean): string {
         : '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m10 3-5 5 5 5" /></svg>';
     };
 
+    if (!window.__prettyzapPickerDrawerAssistInstalled) {
+      let pickerObserver;
+      let pickerCheckFrame;
+      let pickerMissingTimer;
+
+      const stopWatchingPicker = () => {
+        pickerObserver?.disconnect();
+        pickerObserver = undefined;
+        window.cancelAnimationFrame(pickerCheckFrame);
+        window.clearTimeout(pickerMissingTimer);
+        pickerMissingTimer = undefined;
+      };
+
+      const restoreTemporaryCollapse = () => {
+        stopWatchingPicker();
+        if (root.getAttribute("data-prettyzap-picker-drawer-assisted") !== "true") return;
+        root.removeAttribute("data-prettyzap-picker-drawer-assisted");
+        setCollapsed(true, false);
+      };
+
+      const isVisible = (element) => {
+        if (!(element instanceof HTMLElement) || !element.isConnected) return false;
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" &&
+          rect.width > 0 && rect.height > 0;
+      };
+
+      const watchForPickerClose = () => {
+        let attempts = 0;
+        let activePanel;
+
+        const locatePickerPanel = () => {
+          const candidates = [...document.querySelectorAll(
+            '[role="menu"], [role="dialog"], [role="listbox"], [aria-modal="true"]',
+          )].filter((element) => {
+            if (!isVisible(element)) return false;
+            const rect = element.getBoundingClientRect();
+            return rect.width >= 120 && rect.height >= 80;
+          });
+          return candidates
+            .sort((left, right) => {
+              const leftRect = left.getBoundingClientRect();
+              const rightRect = right.getBoundingClientRect();
+              return rightRect.width * rightRect.height - leftRect.width * leftRect.height;
+            })[0];
+        };
+
+        const findPickerPanel = () => {
+          if (root.getAttribute("data-prettyzap-picker-drawer-assisted") !== "true") return;
+
+          activePanel = locatePickerPanel();
+          if (!(activePanel instanceof HTMLElement)) {
+            attempts += 1;
+            if (attempts < 20) window.setTimeout(findPickerPanel, 50);
+            return;
+          }
+
+          const checkPicker = () => {
+            if (pickerCheckFrame) return;
+            pickerCheckFrame = window.requestAnimationFrame(() => {
+              pickerCheckFrame = undefined;
+              if (root.getAttribute("data-prettyzap-picker-drawer-assisted") !== "true") {
+                stopWatchingPicker();
+                return;
+              }
+              if (isVisible(activePanel)) {
+                window.clearTimeout(pickerMissingTimer);
+                pickerMissingTimer = undefined;
+                return;
+              }
+              if (pickerMissingTimer) return;
+
+              // Picker/menu animations can replace short-lived wrappers.
+              // Briefly wait for a semantic successor before treating this
+              // as a close, then return to the user's collapsed state.
+              pickerMissingTimer = window.setTimeout(() => {
+                pickerMissingTimer = undefined;
+                const replacement = locatePickerPanel();
+                if (replacement instanceof HTMLElement) {
+                  activePanel = replacement;
+                  return;
+                }
+                restoreTemporaryCollapse();
+              }, 500);
+            });
+          };
+          pickerObserver = new MutationObserver(checkPicker);
+          pickerObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["class", "style", "hidden", "aria-hidden"],
+          });
+        };
+        window.setTimeout(findPickerPanel, 50);
+      };
+
+      document.addEventListener("click", (event) => {
+        if (root.getAttribute("data-prettyzap-drawer-collapsed") !== "true") return;
+
+        const composer = document.querySelector(selectors.messageComposer);
+        const composerRect = composer instanceof HTMLElement
+          ? composer.getBoundingClientRect()
+          : null;
+        let attachmentTrigger = false;
+        const trigger = event.composedPath().find((entry) => {
+          if (!(entry instanceof HTMLElement) || !entry.matches('button, [role="button"]')) {
+            return false;
+          }
+          const icon = entry.querySelector("[data-icon]")?.getAttribute("data-icon") ?? "";
+          const description = [
+            entry.getAttribute("aria-label"),
+            entry.getAttribute("title"),
+            entry.getAttribute("data-testid"),
+            entry.getAttribute("data-icon"),
+            icon,
+          ].filter(Boolean).join(" ");
+          const describedPicker = /(emoji|sticker|gif|smiley|emoticon)/i.test(description);
+          if (describedPicker) return true;
+          const describedAttachment = /(^|[-_\s])(attach|attachment|plus)([-_\s]|$)/i.test(description) ||
+            /add\s+(file|media|photo|video|document)/i.test(description);
+          if (describedAttachment) {
+            attachmentTrigger = true;
+            return true;
+          }
+
+          // WhatsApp sometimes strips useful labels from the + button. Fall
+          // back to its stable visual relationship with the native composer:
+          // accessory buttons sit immediately to the input's left.
+          if (!composerRect) return false;
+          const triggerRect = entry.getBoundingClientRect();
+          const verticallyAligned = triggerRect.top < composerRect.bottom &&
+            triggerRect.bottom > composerRect.top;
+          const leftOfComposer = triggerRect.right <= composerRect.left + 12 &&
+            composerRect.left - triggerRect.left <= 180;
+          if (verticallyAligned && leftOfComposer) {
+            attachmentTrigger = composerRect.left - triggerRect.right > 20;
+          }
+          return verticallyAligned && leftOfComposer;
+        });
+        if (!trigger) return;
+
+        if (attachmentTrigger) {
+          // Expanding moves the + button while its original pointer event is
+          // still propagating. WhatsApp can then treat that same event as an
+          // outside click and immediately dismiss the menu. Replay it only
+          // after the expanded layout has settled.
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+
+        // WhatsApp positions its native picker and attachment popovers
+        // correctly only with the chat list present. Expand synchronously
+        // during the trigger's capture phase, but do not persist this state.
+        root.setAttribute("data-prettyzap-picker-drawer-assisted", "true");
+        setCollapsed(false, false);
+        watchForPickerClose();
+        if (attachmentTrigger) {
+          window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => trigger.click());
+          });
+        }
+      }, true);
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" ||
+            root.getAttribute("data-prettyzap-picker-drawer-assisted") !== "true") return;
+        window.setTimeout(restoreTemporaryCollapse, 0);
+      }, true);
+      window.__prettyzapPickerDrawerAssistInstalled = true;
+    }
+
     let button = document.getElementById(toggleId);
     if (!button) {
       button = document.createElement("button");
       button.id = toggleId;
       button.type = "button";
       button.addEventListener("click", () => {
+        root.removeAttribute("data-prettyzap-picker-drawer-assisted");
         const collapsed = root.getAttribute("data-prettyzap-drawer-collapsed") === "true";
         setCollapsed(!collapsed);
       });
