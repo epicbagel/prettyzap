@@ -78,7 +78,7 @@ BarWidget {
     visible: !root.showBrand
     anchors.centerIn: parent
     text: "󰖣"
-    color: "#3b82f6"
+    color: Color.accent
     opacity: data.running ? 0.16 : 0
     scale: 1.55
     font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -91,7 +91,7 @@ BarWidget {
     visible: !root.showBrand
     anchors.centerIn: parent
     text: "󰖣"
-    color: "#60a5fa"
+    color: Color.accent
     opacity: data.running ? 0.28 : 0
     scale: 1.24
     font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -104,7 +104,7 @@ BarWidget {
     visible: !root.showBrand
     anchors.centerIn: parent
     text: "󰖣"
-    color: data.running ? "#bfdbfe" : root.foreground
+    color: data.running ? Color.accent : root.foreground
     font.family: root.bar ? root.bar.fontFamily : Style.font.family
     font.pixelSize: Style.bar.iconFont + Style.space(2)
     horizontalAlignment: Text.AlignHCenter
@@ -113,21 +113,30 @@ BarWidget {
 
   Rectangle {
     visible: data.unreadCount > 0
-    anchors.top: parent.top
-    anchors.right: parent.right
+    // Pin the badge to the glyph, not the bar. The glyph is centred, so
+    // anchoring to parent.top detaches the badge on any bar taller than the
+    // 26px default -- it drifts upward and stops reading as part of the icon.
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.horizontalCenterOffset: Style.space(8)
+    anchors.verticalCenter: parent.verticalCenter
+    anchors.verticalCenterOffset: -Style.space(7)
     width: data.unreadCount >= 100
       ? Style.space(24)
       : data.unreadCount >= 10 ? Style.space(17) : Style.space(14)
     height: Style.space(14)
     radius: height / 2
-    color: "#d9485f"
-    border.color: root.foreground
+    // The bar's own alert colour, so the badge tracks the active theme
+    // instead of pinning a red that clashes with it.
+    color: root.bar ? root.bar.urgent : Color.urgent
+    // Ring in the bar background so the badge separates from the glyph it
+    // overlaps, whatever the theme.
+    border.color: root.bar ? root.bar.background : Color.bar.background
     border.width: 1
 
     Text {
       anchors.centerIn: parent
       text: data.unreadCount >= 100 ? "99+" : String(data.unreadCount)
-      color: "white"
+      color: root.bar ? root.bar.background : Color.bar.background
       font.family: root.bar ? root.bar.fontFamily : Style.font.family
       font.pixelSize: data.unreadCount >= 100 ? 7 : 8
       font.bold: true
