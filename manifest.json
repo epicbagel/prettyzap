@@ -19,7 +19,8 @@
     "defaultSection": "right",
     "defaults": {
       "launchCommand": "uwsm-app -- prettyzap",
-      "icon": "glyph"
+      "icon": "glyph",
+      "showBadge": true
     },
     "schema": [
       {
@@ -35,6 +36,13 @@
         "label": "Icon style",
         "description": "brand (PrettyZap logo) or glyph (WhatsApp symbol).",
         "defaultValue": "glyph"
+      },
+      {
+        "key": "showBadge",
+        "type": "boolean",
+        "label": "Show unread badge",
+        "description": "Show the unread count badge on the bar icon.",
+        "defaultValue": true
       }
     ]
   }

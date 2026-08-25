@@ -40,7 +40,9 @@ The plugin only checks whether the `prettyzap` command is installed; it never
 installs packages or runs an installer on your behalf.
 
 The plugin adds a bar icon. Left-click opens or hides PrettyZap, middle-click
-opens settings, and right-click opens the control panel.
+opens settings, and right-click opens the control panel. The widget settings
+also include a `Show unread badge` option; disabling it hides only the bar
+count and does not change WhatsApp notification permissions.
 
 ## Useful commands
 

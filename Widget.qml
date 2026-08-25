@@ -48,6 +48,7 @@ BarWidget {
   Component.onCompleted: {
     data.launchCommand = String(setting("launchCommand", "uwsm-app -- prettyzap"))
     root.showBrand = String(setting("icon", "glyph")) === "brand"
+    root.showBadge = setting("showBadge", true) === true
   }
 
   // This follows Quattro's documented third-party bar-widget pattern: the
@@ -58,6 +59,7 @@ BarWidget {
   // Icon surface: the declared `icon` setting switches between the themed
   // PrettyZap brand mark and the WhatsApp glyph.
   property bool showBrand: false
+  property bool showBadge: true
 
   Image {
     visible: root.showBrand
@@ -78,7 +80,7 @@ BarWidget {
     visible: !root.showBrand
     anchors.centerIn: parent
     text: "󰖣"
-    color: "#3b82f6"
+    color: Color.accent
     opacity: data.running ? 0.16 : 0
     scale: 1.55
     font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -91,7 +93,7 @@ BarWidget {
     visible: !root.showBrand
     anchors.centerIn: parent
     text: "󰖣"
-    color: "#60a5fa"
+    color: Color.accent
     opacity: data.running ? 0.28 : 0
     scale: 1.24
     font.family: root.bar ? root.bar.fontFamily : Style.font.family
@@ -104,7 +106,7 @@ BarWidget {
     visible: !root.showBrand
     anchors.centerIn: parent
     text: "󰖣"
-    color: data.running ? "#bfdbfe" : root.foreground
+    color: data.running ? Color.accent : root.foreground
     font.family: root.bar ? root.bar.fontFamily : Style.font.family
     font.pixelSize: Style.bar.iconFont + Style.space(2)
     horizontalAlignment: Text.AlignHCenter
@@ -112,7 +114,7 @@ BarWidget {
   }
 
   Rectangle {
-    visible: data.unreadCount > 0
+    visible: root.showBadge && data.unreadCount > 0
     anchors.top: parent.top
     anchors.right: parent.right
     width: data.unreadCount >= 100
