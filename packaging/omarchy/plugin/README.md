@@ -22,7 +22,8 @@ the standalone widget there.
 - **Right-click** — open the popup panel.
 - **Panel** — branding header, live status line, Open / Hide, Settings, Theme,
   notification mute/unmute, and Quit buttons. An unread badge is shown on the
-  bar icon when WhatsApp Web reports unread items.
+  bar icon when WhatsApp Web reports unread items, unless `showBadge` is
+  disabled.
 
 ## How it works
 
@@ -38,10 +39,12 @@ the standalone widget there.
 |---|---|---|---|
 | `launchCommand` | string | `uwsm-app -- prettyzap` | How the app is launched. Split on spaces. Set to `prettyzap` on desktops without `uwsm-app`. |
 | `icon` | string | `brand` | `brand` (theme-aware PrettyZap logo) or `glyph` (WhatsApp symbol). |
+| `showBadge` | boolean | `true` | Show the unread count badge on the bar icon. This does not change notification permissions. |
 
 ```bash
 omarchy bar set prettyletto.prettyzap icon glyph
 omarchy bar set prettyletto.prettyzap launchCommand prettyzap
+omarchy bar set prettyletto.prettyzap showBadge false
 ```
 
 ## Install
