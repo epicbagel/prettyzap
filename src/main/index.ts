@@ -93,6 +93,7 @@ const SETTINGS_ARGUMENT = "--settings";
 const QUIT_ARGUMENT = "--quit";
 const THEME_ARGUMENT = "--theme";
 const NOTIFICATIONS_ARGUMENT = "--notifications";
+const BADGE_ARGUMENT = "--badge";
 
 type ThemeArgument = PrettyZapTheme | "toggle";
 
@@ -104,6 +105,7 @@ interface CliAction {
   quit?: boolean;
   theme?: ThemeArgument;
   notifications?: "toggle" | "on" | "off";
+  badge?: "toggle" | "on" | "off";
 }
 
 // Parse the command line for the Omarchy widget's driver flags. Unknown and
@@ -144,6 +146,14 @@ function parseCliArgs(args: readonly string[]): CliAction {
         }
         break;
       }
+      case BADGE_ARGUMENT: {
+        const value = args[i + 1];
+        if (value === "toggle" || value === "on" || value === "off") {
+          action.badge = value;
+          i += 1;
+        }
+        break;
+      }
       default:
         // Chromium only preserves switch values in the `--theme=<value>` form;
         // the two-token `--theme <value>` arrives detached and reordered.
@@ -157,6 +167,12 @@ function parseCliArgs(args: readonly string[]): CliAction {
           const value = args[i].slice("--notifications=".length);
           if (value === "toggle" || value === "on" || value === "off") {
             action.notifications = value;
+          }
+        }
+        if (args[i].startsWith("--badge=")) {
+          const value = args[i].slice("--badge=".length);
+          if (value === "toggle" || value === "on" || value === "off") {
+            action.badge = value;
           }
         }
         break;
@@ -226,6 +242,7 @@ function publishStatus(): AppStatus {
     appReady,
     unreadCount,
     shellState.notificationsEnabled,
+    shellState.badgeEnabled,
   );
   desktopControl?.publish(status);
   return status;
@@ -287,11 +304,12 @@ async function quitPrettyZap(): Promise<void> {
   app.quit();
 }
 
-function settingsSnapshot(): Pick<ShellState, "drawerCollapsed" | "whatsappTheme" | "notificationsEnabled" | "microphoneEnabled" | "cameraEnabled" | "shortcuts" | "signOutOnQuit"> {
+function settingsSnapshot(): Pick<ShellState, "drawerCollapsed" | "whatsappTheme" | "notificationsEnabled" | "badgeEnabled" | "microphoneEnabled" | "cameraEnabled" | "shortcuts" | "signOutOnQuit"> {
   return {
     drawerCollapsed: shellState.drawerCollapsed,
     whatsappTheme: shellState.whatsappTheme,
     notificationsEnabled: shellState.notificationsEnabled,
+    badgeEnabled: shellState.badgeEnabled,
     microphoneEnabled: shellState.microphoneEnabled,
     cameraEnabled: shellState.cameraEnabled,
     shortcuts: { ...shellState.shortcuts },
@@ -518,6 +536,24 @@ function toggleNotifications(): void {
   setNotificationsEnabled(!shellState.notificationsEnabled);
 }
 
+function setBadgeEnabled(enabled: boolean): void {
+  if (!appReady) {
+    console.warn("PrettyZap badge setting ignored: app is not ready");
+    return;
+  }
+  if (shellState.badgeEnabled === enabled) {
+    publishStatus();
+    return;
+  }
+  shellState.badgeEnabled = enabled;
+  scheduleShellStateSave();
+  publishStatus();
+}
+
+function toggleBadge(): void {
+  setBadgeEnabled(!shellState.badgeEnabled);
+}
+
 // Apply the widget's fire-and-forget driver flags. Order is deliberate:
 // theme and settings run first so they work even when the window action that
 // follows (re)shows the app; hide beats toggle/show; an explicit toggle wins
@@ -545,6 +581,13 @@ function applyCliAction(action: CliAction, existingInstance = true): void {
       ? !shellState.notificationsEnabled
       : action.notifications === "on";
     setNotificationsEnabled(enabled);
+  }
+
+  if (action.badge && existingInstance) {
+    const enabled = action.badge === "toggle"
+      ? !shellState.badgeEnabled
+      : action.badge === "on";
+    setBadgeEnabled(enabled);
   }
 
   if (action.settings) {
@@ -891,6 +934,9 @@ ipcMain.handle(SETTINGS_UPDATE_CHANNEL, (event, value: unknown) => {
   if (typeof candidate.notificationsEnabled === "boolean") {
     setNotificationsEnabled(candidate.notificationsEnabled);
   }
+  if (typeof candidate.badgeEnabled === "boolean") {
+    setBadgeEnabled(candidate.badgeEnabled);
+  }
   if (typeof candidate.microphoneEnabled === "boolean") {
     shellState.microphoneEnabled = candidate.microphoneEnabled;
   }
@@ -990,6 +1036,7 @@ if (!hasSingleInstanceLock) {
       openSettings,
       setTheme: (theme) => applyCliAction({ theme }),
       toggleNotifications,
+      toggleBadge,
       quit: quitPrettyZap,
       getStatus: publishStatus,
     }).then((control) => {

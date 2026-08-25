@@ -12,6 +12,7 @@ export interface AppStatus {
   ready: boolean;
   unreadCount: number;
   notificationsEnabled: boolean;
+  badgeEnabled: boolean;
   revision: number;
 }
 
@@ -34,6 +35,7 @@ export function writeStatus(
   ready: boolean,
   unreadCount: number,
   notificationsEnabled: boolean,
+  badgeEnabled: boolean,
 ): AppStatus {
   const file = statusPath();
   const status: AppStatus = {
@@ -44,6 +46,7 @@ export function writeStatus(
     ready,
     unreadCount,
     notificationsEnabled,
+    badgeEnabled,
     revision: ++revision,
   };
   try {

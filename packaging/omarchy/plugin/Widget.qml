@@ -48,7 +48,6 @@ BarWidget {
   Component.onCompleted: {
     data.launchCommand = String(setting("launchCommand", "uwsm-app -- prettyzap"))
     root.showBrand = String(setting("icon", "glyph")) === "brand"
-    root.showBadge = setting("showBadge", true) === true
   }
 
   // This follows Quattro's documented third-party bar-widget pattern: the
@@ -59,7 +58,6 @@ BarWidget {
   // Icon surface: the declared `icon` setting switches between the themed
   // PrettyZap brand mark and the WhatsApp glyph.
   property bool showBrand: false
-  property bool showBadge: true
 
   Image {
     visible: root.showBrand
@@ -114,7 +112,7 @@ BarWidget {
   }
 
   Rectangle {
-    visible: root.showBadge && data.unreadCount > 0
+    visible: data.badgeEnabled && data.unreadCount > 0
     anchors.top: parent.top
     anchors.right: parent.right
     width: data.unreadCount >= 100
@@ -254,6 +252,17 @@ BarWidget {
         foreground: root.foreground
         enabled: data.notificationControlReady
         onClicked: { data.toggleNotifications(); root.close() }
+      }
+
+      Button {
+        width: parent.width
+        visible: data.installed
+        text: data.badgeEnabled ? "Hide badge" : "Show badge"
+        iconText: "󰃨"
+        leftAlign: true
+        foreground: root.foreground
+        enabled: data.badgeControlReady
+        onClicked: { data.toggleBadge(); root.close() }
       }
 
       Button {

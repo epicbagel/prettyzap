@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "prettyletto.prettyzap",
   "name": "PrettyZap",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "author": "PrettyZap",
   "license": "MIT",
   "description": "Native Omarchy bar control for PrettyZap: open, hide, theme, and quit WhatsApp Web.",
@@ -19,8 +19,7 @@
     "defaultSection": "right",
     "defaults": {
       "launchCommand": "uwsm-app -- prettyzap",
-      "icon": "glyph",
-      "showBadge": true
+      "icon": "glyph"
     },
     "schema": [
       {
@@ -36,13 +35,6 @@
         "label": "Icon style",
         "description": "brand (PrettyZap logo) or glyph (WhatsApp symbol).",
         "defaultValue": "glyph"
-      },
-      {
-        "key": "showBadge",
-        "type": "boolean",
-        "label": "Show unread badge",
-        "description": "Show the unread count badge on the bar icon.",
-        "defaultValue": true
       }
     ]
   }

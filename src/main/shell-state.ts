@@ -9,6 +9,7 @@ export interface ShellState {
   drawerCollapsed: boolean;
   whatsappTheme: "whatsapp" | "system";
   notificationsEnabled: boolean;
+  badgeEnabled: boolean;
   /** Allow WhatsApp Web to request microphone access. */
   microphoneEnabled: boolean;
   /** Allow WhatsApp Web to request camera access. */
@@ -39,6 +40,7 @@ export const DEFAULT_SHELL_STATE: ShellState = {
   drawerCollapsed: true,
   whatsappTheme: "whatsapp",
   notificationsEnabled: true,
+  badgeEnabled: true,
   microphoneEnabled: true,
   cameraEnabled: true,
   signOutOnQuit: false,
@@ -101,6 +103,7 @@ export function normalizeShellState(value: unknown): ShellState {
     drawerCollapsed: candidate.drawerCollapsed !== false,
     whatsappTheme: candidate.whatsappTheme === "system" ? "system" : "whatsapp",
     notificationsEnabled: candidate.notificationsEnabled !== false,
+    badgeEnabled: candidate.badgeEnabled !== false,
     microphoneEnabled: candidate.microphoneEnabled !== false,
     cameraEnabled: candidate.cameraEnabled !== false,
     signOutOnQuit: candidate.signOutOnQuit === true,
