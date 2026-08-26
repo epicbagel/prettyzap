@@ -27,10 +27,12 @@ Item {
   property bool ready: false
   property int unreadCount: 0
   property bool notificationsEnabled: true
+  property bool badgeEnabled: true
   property int revision: 0
   property var pendingActions: []
   property int checkedPid: 0
   readonly property bool notificationControlReady: root.running && root.ready
+  readonly property bool badgeControlReady: root.running && root.ready
 
   readonly property string home: Quickshell.env("HOME") || ""
   readonly property string statusPath:
@@ -61,6 +63,7 @@ Item {
     root.ready = false
     root.unreadCount = 0
     root.notificationsEnabled = true
+    root.badgeEnabled = true
     root.revision = 0
     root.running = false
     root.checkedPid = 0
@@ -81,6 +84,7 @@ Item {
         var unread = parseInt(parsed.unreadCount, 10)
         root.unreadCount = isFinite(unread) && unread > 0 ? unread : 0
         root.notificationsEnabled = parsed.notificationsEnabled !== false
+        root.badgeEnabled = parsed.badgeEnabled !== false
         var r = parseInt(parsed.revision, 10)
         root.revision = isFinite(r) && r >= 0 ? r : 0
       } else {
@@ -166,6 +170,7 @@ Item {
     if (action === "quit") return root.launchArgs.concat(["--quit"])
     if (action === "theme") return root.launchArgs.concat(["--theme=toggle"])
     if (action === "notifications") return root.launchArgs.concat(["--notifications=toggle"])
+    if (action === "badge") return root.launchArgs.concat(["--badge=toggle"])
     return root.launchArgs
   }
 
@@ -177,7 +182,8 @@ Item {
       : action === "settings" ? "OpenSettings"
       : action === "quit" ? "Quit"
       : action === "theme" ? "ToggleTheme"
-      : action === "notifications" ? "ToggleNotifications" : "Show"
+      : action === "notifications" ? "ToggleNotifications"
+      : action === "badge" ? "ToggleBadge" : "Show"
     var command = ["gdbus", "call", "--session", "--dest", root.busName,
       "--object-path", root.objectPath, "--method", root.interfaceName + "." + method]
     if (action === "set-whatsapp" || action === "set-system")
@@ -188,6 +194,10 @@ Item {
   function enqueue(action) {
     if (action === "notifications" && !root.notificationControlReady) {
       console.warn("prettyzap notifications action ignored: app is not ready")
+      return
+    }
+    if (action === "badge" && !root.badgeControlReady) {
+      console.warn("prettyzap badge action ignored: app is not ready")
       return
     }
     root.pendingActions = root.pendingActions.concat([action])
@@ -231,6 +241,7 @@ Item {
     enqueue("theme")
   }
   function toggleNotifications() { enqueue("notifications") }
+  function toggleBadge() { enqueue("badge") }
 
   Component.onCompleted: {
     root.checkInstalled()
